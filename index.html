@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light dark"><title>Yağ Bakım Defteri</title>
+<style>
+/* Layout: tek sütun, üstte yapışkan plaka arama çubuğu, altında son işlem kartı ve geçmiş listesi; yeni kayıt alttan açılan form. */
+:root {
+  --bg: #eef1f3;
+  --surface: #ffffff;
+  --surface-2: #e4e9ec;
+  --fg: #12181c;
+  --muted: #56636b;
+  --line: #d3dbe0;
+  --accent: #f2b705;
+  --accent-fg: #1a1400;
+  --plate-blue: #1b4fb0;
+  --danger: #b3261e;
+  --font-display: "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1417; --surface: #182025; --surface-2: #232d33; --fg: #eef2f4; --muted: #9aa8b0;
+    --line: #2c383f; --accent: #f2b705; --accent-fg: #1a1400; --plate-blue: #4d7fe0; --danger: #ff8a80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1417; --surface: #182025; --surface-2: #232d33; --fg: #eef2f4; --muted: #9aa8b0;
+  --line: #2c383f; --accent: #f2b705; --accent-fg: #1a1400; --plate-blue: #4d7fe0; --danger: #ff8a80;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.45;
+  padding-block: 0 96px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 640px; margin: 0 auto; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); background: var(--bg); padding: 14px 0 12px; z-index: 5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); background: var(--bg); z-index: 10; }
+h1 { font-family: var(--font-display); font-size: 15px; letter-spacing: .14em; text-transform: uppercase; margin: 0 0 8px; color: var(--muted); font-weight: 600; }
+.search { display: flex; align-items: stretch; background: var(--surface); border: 2px solid var(--fg); border-radius: 8px; overflow: hidden; }
+.search .tr { background: var(--plate-blue); color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 14px; display: flex; align-items: center; padding: 0 10px; letter-spacing: .05em; }
+.search input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 12px 12px; font-family: var(--font-display); font-weight: 700; font-size: 30px; letter-spacing: .08em; text-transform: uppercase; }
+.search input::placeholder { color: var(--muted); opacity: .6; font-weight: 600; }
+.search input:focus-visible { outline: none; }
+.search:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+.search .clear { border: 0; background: transparent; padding: 0 14px; font-size: 22px; color: var(--muted); }
+
+.status { font-size: 13px; color: var(--muted); margin: 6px 0 0; min-height: 18px; }
+.section-label { font-family: var(--font-display); font-weight: 600; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
+
+.plate { display: inline-flex; align-items: stretch; border: 2px solid var(--fg); border-radius: 5px; overflow: hidden; background: var(--surface); }
+.plate .tr { background: var(--plate-blue); color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 11px; padding: 0 6px; display: flex; align-items: center; }
+.plate .no { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: .08em; padding: 2px 10px; }
+
+.last { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; }
+.last .head { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
+.last .tag { font-family: var(--font-display); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-size: 13px; background: var(--accent); color: var(--accent-fg); padding: 3px 8px; border-radius: 4px; }
+.last .when { font-size: 28px; font-family: var(--font-display); font-weight: 700; line-height: 1.1; }
+.last .when small { font-family: var(--font-body); font-weight: 500; font-size: 15px; color: var(--muted); margin-left: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { background: var(--surface-2); border-radius: 999px; padding: 4px 11px; font-size: 14px; font-weight: 500; }
+.meta { color: var(--muted); font-size: 14px; display: grid; gap: 2px; }
+.meta b { color: var(--fg); font-weight: 600; }
+
+.list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.rec { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 6px; width: 100%; text-align: left; }
+button.rec:hover { border-color: var(--fg); }
+.rec .row { display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
+.rec .d { font-weight: 600; font-variant-numeric: tabular-nums; }
+.rec .km { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+.rec .acts { display: flex; gap: 14px; }
+.link { background: none; border: 0; padding: 4px 0; font-size: 14px; color: var(--muted); text-decoration: underline; }
+.link.del { color: var(--danger); }
+.empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; padding: 22px 16px; text-align: center; color: var(--muted); }
+.empty strong { display: block; color: var(--fg); font-size: 17px; margin-bottom: 4px; }
+
+.fab { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 6;
+  background: var(--accent); color: var(--accent-fg); border: 2px solid var(--fg); border-radius: 999px; padding: 14px 22px; font-weight: 700; font-size: 17px; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+
+.scrim { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+.sheet { background: var(--surface); width: 100%; max-width: 640px; max-height: 94%; overflow-y: auto; border-radius: 16px 16px 0 0;
+  padding: 18px max(16px, env(safe-area-inset-left, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 14px; }
+.sheet h2 { font-family: var(--font-display); font-size: 26px; margin: 0; }
+.field { display: grid; gap: 5px; min-width: 0; }
+.field label, .field .lbl { font-size: 13px; font-weight: 600; color: var(--muted); }
+.field input[type=text], .field input[type=tel], .field input[type=number], .field input[type=date], .field textarea {
+  width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 11px 12px; min-width: 0; }
+.field textarea { min-height: 70px; resize: vertical; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.checks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.check { position: relative; }
+.check input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.check span { display: block; text-align: center; padding: 12px 8px; border: 2px solid var(--line); border-radius: 8px; font-weight: 600; background: var(--bg); }
+.check input:checked + span { background: var(--accent); color: var(--accent-fg); border-color: var(--fg); }
+.check input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+.btns { display: flex; gap: 10px; }
+.btn { flex: 1; padding: 14px; border-radius: 8px; border: 2px solid var(--fg); font-weight: 700; background: var(--surface); }
+.btn.primary { background: var(--accent); color: var(--accent-fg); }
+.btn.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+.err { color: var(--danger); font-size: 14px; min-height: 18px; margin: 0; }
+@media (max-width: 380px) { .two { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: no-preference) { .sheet { animation: up .18s ease-out; } @keyframes up { from { transform: translateY(24px); opacity: .5; } } }
+.tools { display: flex; gap: 16px; margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--line); }
+.hint { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+</style></head><body>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Yağ Bakım Defteri</h1>
+    <div class="search">
+      <span class="tr">TR</span>
+      <input id="q" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="34 ABC 123" aria-label="Plaka ara">
+      <button class="clear" id="clr" aria-label="Aramayı temizle" hidden>×</button>
+    </div>
+    <p class="status" id="status" aria-live="polite"></p>
+  </header>
+  <main id="main"></main>
+  <div class="tools"><button class="link" id="bk">Yedek al</button><button class="link" id="rs">Yedekten geri yükle</button><input type="file" id="rsf" accept="application/json,.json" hidden></div>
+  <p class="hint">Kayıtlar yalnızca bu telefonda saklanır. Telefon değiştirirsen önce “Yedek al”.</p>
+</div>
+<button class="fab" id="add">+ Yeni kayıt</button>
+<div id="modal"></div>
+
+<script>
+(function () {
+  var OPS = ["Motor yağı", "Yağ filtresi", "Hava filtresi", "Polen filtresi"];
+  var LS_KEY = "yag-bakim-kayitlar-v1";
+  var records = [];      // {id, plate, date, km, ops[], oil, name, phone, note, createdAt}
+  var db = null, col = null, mode = "loading";
+  var query = "";
+  var $ = function (id) { return document.getElementById(id); };
+
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function norm(p) { return String(p || "").toUpperCase().replace(/[^0-9A-ZÇĞİÖŞÜ]/g, ""); }
+  function pretty(p) { var m = String(p).match(/^(\d{2})([A-ZÇĞİÖŞÜ]{1,3})(\d{2,4})$/); return m ? m[1] + " " + m[2] + " " + m[3] : p; }
+  function fmtDate(d) { var m = String(d || "").match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3] + "." + m[2] + "." + m[1] : ""; }
+  function fmtKm(k) { return (k || k === 0) ? Number(k).toLocaleString("tr-TR") + " km" : ""; }
+  function today() { var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function plateHtml(p) { return '<span class="plate"><span class="tr">TR</span><span class="no">' + esc(pretty(p)) + '</span></span>'; }
+  function sortRecs(a) { return a.slice().sort(function (x, y) { return (y.date || "").localeCompare(x.date || "") || (y.createdAt || 0) - (x.createdAt || 0); }); }
+
+  /* ---------- storage ---------- */
+  function lsRead() { try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch (e) { return []; } }
+  function lsWrite() { try { localStorage.setItem(LS_KEY, JSON.stringify(records)); } catch (e) {} }
+
+  function save(rec) {
+    if (mode === "db") { var id = rec.id; var body = Object.assign({}, rec); delete body.id; return col.doc(id).set(body); }
+    var i = records.findIndex(function (r) { return r.id === rec.id; });
+    if (i >= 0) records[i] = rec; else records.push(rec);
+    lsWrite(); render(); return Promise.resolve();
+  }
+  function remove(id) {
+    if (mode === "db") return col.doc(id).delete();
+    records = records.filter(function (r) { return r.id !== id; }); lsWrite(); render(); return Promise.resolve();
+  }
+  function newId() { return "k" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  function startLocal() { mode = "local"; records = lsRead();  render(); }
+
+  function startDb(d) {
+    db = d; col = db.collection("kayitlar"); mode = "db";
+    var timer = setTimeout(function () { setStatus("Kayıtlara ulaşılamıyor, liste güncel olmayabilir."); }, 10000);
+    col.onSnapshot(function (snap) {
+      records = snap.docs.map(function (s) { var o = Object.assign({}, s.data()); o.id = s.id; return o; });
+      if (!snap.metadata.fromCache) { clearTimeout(timer); setStatus(""); }
+      render();
+    }, function () { clearTimeout(timer); setStatus("Kayıtlar okunamadı. Sayfayı yenileyip tekrar dene."); });
+  }
+
+  function setStatus(t) { $("status").textContent = t || ""; }
+
+  /* ---------- views ---------- */
+  function render() {
+    var main = $("main"), key = norm(query);
+    $("clr").hidden = !query;
+    if (mode === "loading") { main.innerHTML = '<div class="empty">Kayıtlar yükleniyor…</div>'; return; }
+
+    var groups = {};
+    records.forEach(function (r) { (groups[r.plate] = groups[r.plate] || []).push(r); });
+
+    if (!records.length) {
+      main.innerHTML = '<div class="empty"><strong>Henüz kayıt yok</strong>Sağ alttaki “Yeni kayıt” ile ilk aracı ekle. Sonra plakayı yazınca son yapılan işlem burada çıkar.</div>';
+      return;
+    }
+
+    if (key) {
+      var plates = Object.keys(groups).filter(function (p) { return p.indexOf(key) !== -1; });
+      if (!plates.length) {
+        main.innerHTML = '<div class="empty"><strong>' + esc(query.toUpperCase()) + ' için kayıt yok</strong>Bu araç daha önce gelmemiş. “Yeni kayıt” ile ekleyebilirsin.</div>';
+        return;
+      }
+      var html = "";
+      var exact = plates.indexOf(key) !== -1 ? [key] : plates;
+      if (plates.length > 1 && exact.length > 1) {
+        html += '<div class="section-label">Eşleşen araçlar</div><ul class="list">' + plates.map(function (p) {
+          var l = sortRecs(groups[p])[0];
+          return '<li><button class="rec" data-plate="' + esc(p) + '"><div class="row">' + plateHtml(p) + '<span class="d">' + fmtDate(l.date) + '</span></div><div class="km">' + esc(l.name || "") + '</div></button></li>';
+        }).join("") + '</ul>';
+        main.innerHTML = html; return;
+      }
+      html += vehicleView(exact[0], sortRecs(groups[exact[0]]));
+      main.innerHTML = html; return;
+    }
+
+    var latest = Object.keys(groups).map(function (p) { return sortRecs(groups[p])[0]; });
+    latest = sortRecs(latest).slice(0, 15);
+    main.innerHTML = '<div class="section-label">Son gelen araçlar</div><ul class="list">' + latest.map(function (l) {
+      return '<li><button class="rec" data-plate="' + esc(l.plate) + '"><div class="row">' + plateHtml(l.plate) + '<span class="d">' + fmtDate(l.date) + '</span></div>' +
+        '<div class="chips">' + (l.ops || []).map(function (o) { return '<span class="chip">' + esc(o) + '</span>'; }).join("") + '</div></button></li>';
+    }).join("") + '</ul>';
+  }
+
+  function vehicleView(plate, recs) {
+    var l = recs[0];
+    var h = '<div class="section-label">En son yapılan işlem</div><div class="last"><div class="head">' + plateHtml(plate) + '<span class="tag">Son işlem</span></div>' +
+      '<div class="when">' + fmtDate(l.date) + '<small>' + esc(fmtKm(l.km)) + '</small></div>' +
+      '<div class="chips">' + ((l.ops || []).length ? l.ops.map(function (o) { return '<span class="chip">' + esc(o) + '</span>'; }).join("") : '<span class="chip">İşlem seçilmemiş</span>') + '</div>' +
+      '<div class="meta">' + (l.oil ? '<div>Yağ: <b>' + esc(l.oil) + '</b></div>' : '') + (l.name ? '<div>Müşteri: <b>' + esc(l.name) + '</b>' + (l.phone ? ' · ' + esc(l.phone) : '') + '</div>' : '') + (l.note ? '<div>Not: <b>' + esc(l.note) + '</b></div>' : '') + '</div></div>';
+    h += '<div class="section-label">Geçmiş (' + recs.length + ' kayıt)</div><ul class="list">' + recs.map(function (r) {
+      return '<li class="rec"><div class="row"><span class="d">' + fmtDate(r.date) + '</span><span class="km">' + esc(fmtKm(r.km)) + '</span></div>' +
+        '<div class="chips">' + (r.ops || []).map(function (o) { return '<span class="chip">' + esc(o) + '</span>'; }).join("") + '</div>' +
+        '<div class="meta">' + (r.oil ? '<div>Yağ: <b>' + esc(r.oil) + '</b></div>' : '') + (r.note ? '<div>Not: <b>' + esc(r.note) + '</b></div>' : '') + '</div>' +
+        '<div class="acts"><button class="link" data-edit="' + esc(r.id) + '">Düzenle</button><button class="link del" data-del="' + esc(r.id) + '">Sil</button></div></li>';
+    }).join("") + '</ul>';
+    return h;
+  }
+
+  /* ---------- form ---------- */
+  function closeModal() { $("modal").innerHTML = ""; }
+
+  function openForm(rec) {
+    var edit = !!(rec && rec.id);
+    var r = rec || {};
+    var plateVal = r.plate ? pretty(r.plate) : (norm(query) ? pretty(norm(query)) : "");
+    var lastForPlate = null;
+    $("modal").innerHTML =
+      '<div class="scrim" id="scrim"><form class="sheet" id="form" novalidate><h2>' + (edit ? "Kaydı düzenle" : "Yeni kayıt") + '</h2>' +
+      '<div class="field"><label for="f-plate">Plaka</label><input id="f-plate" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" value="' + esc(plateVal) + '" placeholder="34 ABC 123"></div>' +
+      '<div class="two"><div class="field"><label for="f-date">Tarih</label><input id="f-date" type="date" value="' + esc(r.date || today()) + '"></div>' +
+      '<div class="field"><label for="f-km">Kilometre</label><input id="f-km" type="number" inputmode="numeric" min="0" value="' + esc(r.km == null ? "" : r.km) + '" placeholder="145000"></div></div>' +
+      '<div class="field"><span class="lbl">Yapılan işlem</span><div class="checks">' + OPS.map(function (o, i) {
+        return '<label class="check"><input type="checkbox" name="op" value="' + esc(o) + '"' + ((r.ops || (edit ? [] : ["Motor yağı", "Yağ filtresi"])).indexOf(o) !== -1 ? " checked" : "") + '><span>' + esc(o) + '</span></label>';
+      }).join("") + '</div></div>' +
+      '<div class="field"><label for="f-oil">Kullanılan yağ</label><input id="f-oil" type="text" value="' + esc(r.oil || "") + '" placeholder="Castrol 5W-30, 4 litre"></div>' +
+      '<div class="two"><div class="field"><label for="f-name">Müşteri adı (isteğe bağlı)</label><input id="f-name" type="text" value="' + esc(r.name || "") + '"></div>' +
+      '<div class="field"><label for="f-phone">Telefon (isteğe bağlı)</label><input id="f-phone" type="tel" inputmode="tel" value="' + esc(r.phone || "") + '"></div></div>' +
+      '<div class="field"><label for="f-note">Not (isteğe bağlı)</label><textarea id="f-note">' + esc(r.note || "") + '</textarea></div>' +
+      '<p class="err" id="err" aria-live="polite"></p>' +
+      '<div class="btns"><button type="button" class="btn" id="cancel">Vazgeç</button><button type="submit" class="btn primary" id="saveBtn">Kaydet</button></div></form></div>';
+
+    $("scrim").addEventListener("click", function (e) { if (e.target === this) closeModal(); });
+    $("cancel").addEventListener("click", closeModal);
+    $("f-plate").addEventListener("blur", function () { var n = norm(this.value); this.value = pretty(n); });
+    $("f-plate").addEventListener("input", function () { this.value = this.value.toUpperCase(); });
+
+    // yeni kayıtta plaka eşleşirse müşteri bilgisini doldur
+    if (!edit) $("f-plate").addEventListener("change", function () {
+      var n = norm(this.value);
+      var m = sortRecs(records.filter(function (x) { return x.plate === n; }))[0];
+      if (m) { if (!$("f-name").value) $("f-name").value = m.name || ""; if (!$("f-phone").value) $("f-phone").value = m.phone || ""; }
+    });
+
+    $("form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var plate = norm($("f-plate").value);
+      if (plate.length < 4) { $("err").textContent = "Plakayı yaz, örneğin 34 ABC 123."; $("f-plate").focus(); return; }
+      var ops = Array.prototype.map.call(document.querySelectorAll('input[name="op"]:checked'), function (c) { return c.value; });
+      var kmRaw = $("f-km").value;
+      var rec = {
+        id: edit ? r.id : newId(), plate: plate, date: $("f-date").value || today(),
+        km: kmRaw === "" ? null : Number(kmRaw), ops: ops, oil: $("f-oil").value.trim(),
+        name: $("f-name").value.trim(), phone: $("f-phone").value.trim(), note: $("f-note").value.trim(),
+        createdAt: edit ? (r.createdAt || Date.now()) : Date.now()
+      };
+      $("saveBtn").disabled = true;
+      save(rec).then(function () { query = pretty(plate); $("q").value = query; closeModal(); render(); window.scrollTo(0, 0); })
+        .catch(function () { $("saveBtn").disabled = false; $("err").textContent = "Kaydedilemedi. Bir süre sonra tekrar dene."; });
+    });
+    setTimeout(function () { (plateVal ? $("f-km") : $("f-plate")).focus(); }, 50);
+  }
+
+  function confirmDelete(id) {
+    var r = records.find(function (x) { return x.id === id; }); if (!r) return;
+    $("modal").innerHTML = '<div class="scrim" id="scrim"><div class="sheet"><h2>Kaydı sil?</h2><p>' + esc(pretty(r.plate)) + ' plakalı aracın ' + esc(fmtDate(r.date)) + ' tarihli kaydı silinecek.</p>' +
+      '<div class="btns"><button class="btn" id="cancel">Vazgeç</button><button class="btn danger" id="yes">Sil</button></div></div></div>';
+    $("scrim").addEventListener("click", function (e) { if (e.target === this) closeModal(); });
+    $("cancel").addEventListener("click", closeModal);
+    $("yes").addEventListener("click", function () { remove(id).then(closeModal).catch(function () { closeModal(); setStatus("Silinemedi."); }); });
+  }
+
+  /* ---------- events ---------- */
+  $("q").addEventListener("input", function () { query = this.value; render(); });
+  $("clr").addEventListener("click", function () { query = ""; $("q").value = ""; render(); $("q").focus(); });
+  $("add").addEventListener("click", function () { openForm(null); });
+  $("main").addEventListener("click", function (e) {
+    var t = e.target.closest("[data-plate],[data-edit],[data-del]"); if (!t) return;
+    if (t.dataset.plate) { query = pretty(t.dataset.plate); $("q").value = query; render(); window.scrollTo(0, 0); }
+    else if (t.dataset.edit) openForm(records.find(function (x) { return x.id === t.dataset.edit; }));
+    else if (t.dataset.del) confirmDelete(t.dataset.del);
+  });
+
+  /* yedek */
+  $("bk").addEventListener("click", function () {
+    var txt = JSON.stringify(records);
+    var name = "yag-bakim-yedek-" + today() + ".json";
+    var blob = new Blob([txt], { type: "application/json" });
+    try {
+      var f = new File([blob], name, { type: "application/json" });
+      if (navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], title: name }).catch(function () {}); return; }
+    } catch (e) {}
+    var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  });
+  $("rs").addEventListener("click", function () { $("rsf").click(); });
+  $("rsf").addEventListener("change", function () {
+    var f = this.files[0]; if (!f) return; var rd = new FileReader();
+    rd.onload = function () {
+      try {
+        var arr = JSON.parse(rd.result); if (!Array.isArray(arr)) throw 0;
+        var have = {}; records.forEach(function (r) { have[r.id] = 1; });
+        var n = 0; arr.forEach(function (r) { if (r && r.id && r.plate && !have[r.id]) { records.push(r); n++; } });
+        lsWrite(); render(); setStatus(n + " kayıt geri yüklendi.");
+      } catch (e) { setStatus("Bu dosya yedek dosyası gibi görünmüyor."); }
+    };
+    rd.readAsText(f); this.value = "";
+  });
+
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+  startLocal();
+})();
+</script>
+</body></html>
