@@ -302,27 +302,53 @@ button.rec:hover { border-color: var(--fg); }
   });
 
   /* yedek */
+  function importText(txt) {
+    try {
+      var arr = JSON.parse(txt); if (!Array.isArray(arr)) throw 0;
+      var have = {}; records.forEach(function (r) { have[r.id] = 1; });
+      var n = 0; arr.forEach(function (r) { if (r && r.id && r.plate && !have[r.id]) { records.push(r); n++; } });
+      lsWrite(); render(); closeModal(); setStatus(n + " kayıt geri yüklendi.");
+    } catch (e) { var el = $("bkerr"); if (el) el.textContent = "Bu metin yedek gibi görünmüyor. Yedeğin tamamını yapıştır."; }
+  }
   $("bk").addEventListener("click", function () {
     var txt = JSON.stringify(records);
-    var name = "yag-bakim-yedek-" + today() + ".json";
-    var blob = new Blob([txt], { type: "application/json" });
-    try {
-      var f = new File([blob], name, { type: "application/json" });
-      if (navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], title: name }).catch(function () {}); return; }
-    } catch (e) {}
-    var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    $("modal").innerHTML = '<div class="scrim" id="scrim"><div class="sheet"><h2>Yedek al</h2>' +
+      '<p class="hint">' + records.length + ' kayıt var. “Kopyala” düğmesine bas, sonra Notlar’a ya da WhatsApp’ta kendine yapıştır.</p>' +
+      '<div class="field"><textarea id="bktxt" readonly rows="5"></textarea></div><p class="err" id="bkerr" aria-live="polite"></p>' +
+      '<div class="btns"><button class="btn" id="bkclose">Kapat</button><button class="btn primary" id="bkcopy">Kopyala</button></div>' +
+      '<button class="link" id="bkshare">Dosya olarak paylaş</button></div></div>';
+    $("bktxt").value = txt;
+    $("scrim").addEventListener("click", function (e) { if (e.target === this) closeModal(); });
+    $("bkclose").addEventListener("click", closeModal);
+    $("bkcopy").addEventListener("click", function () {
+      var ta = $("bktxt"), btn = this;
+      function ok() { btn.textContent = "Kopyalandı"; }
+      function manual() { ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length); try { if (document.execCommand("copy")) { ok(); return; } } catch (e) {} $("bkerr").textContent = "Metin seçildi. Ekranda Kopyala’ya basıp kopyala."; }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, manual); else manual();
+    });
+    $("bkshare").addEventListener("click", function () {
+      var name = "yag-bakim-yedek-" + today() + ".json";
+      try {
+        var f = new File([new Blob([txt], { type: "application/json" })], name, { type: "application/json" });
+        if (navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], title: name }).catch(function () {}); return; }
+      } catch (e) {}
+      $("bkerr").textContent = "Bu tarayıcı dosya paylaşmayı desteklemiyor. “Kopyala” yolunu kullan.";
+    });
   });
-  $("rs").addEventListener("click", function () { $("rsf").click(); });
+  $("rs").addEventListener("click", function () {
+    $("modal").innerHTML = '<div class="scrim" id="scrim"><div class="sheet"><h2>Yedekten geri yükle</h2>' +
+      '<p class="hint">Kopyaladığın yedek metnini buraya yapıştır. Zaten olan kayıtlar tekrar eklenmez.</p>' +
+      '<div class="field"><textarea id="rstxt" rows="6" placeholder="Yedek metnini buraya yapıştır"></textarea></div><p class="err" id="bkerr" aria-live="polite"></p>' +
+      '<div class="btns"><button class="btn" id="bkclose">Vazgeç</button><button class="btn primary" id="rsgo">Yükle</button></div>' +
+      '<button class="link" id="rsfile">Dosyadan seç</button></div></div>';
+    $("scrim").addEventListener("click", function (e) { if (e.target === this) closeModal(); });
+    $("bkclose").addEventListener("click", closeModal);
+    $("rsgo").addEventListener("click", function () { importText($("rstxt").value.trim()); });
+    $("rsfile").addEventListener("click", function () { $("rsf").click(); });
+  });
   $("rsf").addEventListener("change", function () {
     var f = this.files[0]; if (!f) return; var rd = new FileReader();
-    rd.onload = function () {
-      try {
-        var arr = JSON.parse(rd.result); if (!Array.isArray(arr)) throw 0;
-        var have = {}; records.forEach(function (r) { have[r.id] = 1; });
-        var n = 0; arr.forEach(function (r) { if (r && r.id && r.plate && !have[r.id]) { records.push(r); n++; } });
-        lsWrite(); render(); setStatus(n + " kayıt geri yüklendi.");
-      } catch (e) { setStatus("Bu dosya yedek dosyası gibi görünmüyor."); }
-    };
+    rd.onload = function () { importText(rd.result); };
     rd.readAsText(f); this.value = "";
   });
 
